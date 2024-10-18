@@ -14,14 +14,14 @@
 ```bash
 docker build -t laravel-ecs-poridhi .
 
-
+```
 
 
 ## Docker-composer
 
 ```bash
 docker-compose up -d --build
-```
+
 
 ## About Laravel
 
