@@ -1,6 +1,9 @@
 # Use official PHP image as base
 FROM php:8.2-fpm
 
+# Install Nginx
+FROM nginx:latest AS nginx
+
 # Set working directory
 WORKDIR /var/www/html
 
