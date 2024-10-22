@@ -1,55 +1,46 @@
-# Use official PHP image as base
-FROM php:8.2-fpm
+FROM php:8.3-fpm-alpine as php
 
+RUN apk add --no-cache unzip libpq-dev gnutls-dev autoconf build-base \
+    curl-dev nginx supervisor shadow bash
+RUN docker-php-ext-install pdo pdo_mysql
+RUN pecl install pcov && docker-php-ext-enable pcov
+RUN docker-php-ext-install pcntl
 
-# Set working directory
-WORKDIR /var/www/html
+WORKDIR /app
 
-# Install dependencies
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    libpng-dev \
-    libjpeg62-turbo-dev \
-    libfreetype6-dev \
-    libonig-dev \
-    libxml2-dev \
-    zip \
-    unzip \
-    git \
-    curl \
-    libpq-dev \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install pdo pdo_pgsql mbstring exif pcntl bcmath gd
+# Setup PHP-FPM.
+COPY docker/php/php.ini $PHP_INI_DIR/
+COPY docker/php/php-fpm.conf /usr/local/etc/php-fpm.d/www.conf
+COPY docker/php/conf.d/opcache.ini $PHP_INI_DIR/conf.d/opcache.ini
 
-# Install Composer
+RUN addgroup --system --gid 1000 customgroup
+RUN adduser --system --ingroup customgroup --uid 1000 customuser
+
+# Setup nginx.
+COPY docker/nginx/nginx.conf docker/nginx/fastcgi_params docker/nginx/fastcgi_fpm docker/nginx/gzip_params /etc/nginx/
+RUN mkdir -p /var/lib/nginx/tmp /var/log/nginx
+RUN /usr/sbin/nginx -t -c /etc/nginx/nginx.conf
+
+# setup nginx user permissions
+RUN chown -R customuser:customgroup /var/lib/nginx /var/log/nginx
+RUN chown -R customuser:customgroup /usr/local/etc/php-fpm.d
+
+# Setup supervisor.
+COPY docker/supervisor/supervisord.conf /etc/supervisor/supervisord.conf
+
+# Copy application sources into the container.
+COPY --chown=customuser:customgroup . .
+RUN chown -R customuser:customgroup /app
+RUN chmod +w /app/public
+RUN chown -R customuser:customgroup /var /run
+
+# disable root user
+RUN passwd -l root
+RUN usermod -s /usr/sbin/nologin root
+
+USER customuser
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Copy existing application code
-COPY . /var/www/html/
+ENTRYPOINT ["docker/entrypoint.sh"]
 
-# Change ownership of the application directory to www-data
-RUN chown -R www-data:www-data /var/www/html
-
-RUN chown -R www-data:www-data /var/www/html/public
-
-# Add user for laravel application
-RUN groupadd -g 1000 www
-RUN useradd -u 1000 -ms /bin/bash -g www www
-
-# Copy existing application directory contents
-COPY . /var/www
-
-# Copy existing application directory permissions
-COPY --chown=www:www . /var/www
-
-# Change current user to www
-USER www
-
-# Create laravel caching folders.
-RUN mkdir -p /var/www/html//var/www/html/storage/framework
-
-# Expose port 9000 for PHP-FPM
-EXPOSE 9000
-
-# Start PHP-FPM server
-CMD ["php-fpm"]
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/supervisord.conf"]

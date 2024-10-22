@@ -10,9 +10,8 @@
 
 ## Run  with Docker 
 
-
 ```bash
-docker build -t laravel-ecs-poridhi .
+sudo chmod 755 docker/entrypoint.sh
 
 ```
 
@@ -21,6 +20,15 @@ docker build -t laravel-ecs-poridhi .
 
 ```bash
 docker-compose up -d --build
+
+```
+
+## Open Laravel todo
+
+```bash
+
+localhost:8080
+
 ```
 
 ## About Laravel
