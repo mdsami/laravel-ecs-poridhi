@@ -19,6 +19,11 @@
 - Elastic Container Repository
 - Application Load Balancer
 
+
+## VPC
+
+![Overview](https://github.com/mdsami/laravel-ecs-poridhi/blob/main/vpc.png)
+
 ## Run  with Docker 
 
 ```bash
