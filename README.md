@@ -8,6 +8,17 @@
 </p>
 
 
+## AWS Elastic Container Service — A highly available and high performance container orchestration service. It allows you to run, scale and secure docker containers in AWS.
+
+### Let’s try to deploy our Laravel application to ECS. you will need:
+
+- Docker images of our app(Nginx, app , Mysql)
+- ECS Cluster
+- ECS Task Definition
+- ECS Service
+- Elastic Container Repository
+- Application Load Balancer
+
 ## Run  with Docker 
 
 ```bash
