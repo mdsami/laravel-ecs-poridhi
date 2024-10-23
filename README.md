@@ -25,7 +25,7 @@
 ![Overview](https://github.com/mdsami/laravel-ecs-poridhi/blob/main/vpc.png)
 
 
-## Create a Cluster of type EC2 Linux + Networking . Choose instance type as per your wish ( i have chosen t2.micro) and number of instances to be launch in the cluster( i have given 1)
+### Create a Cluster of type EC2 Linux + Networking . Choose instance type as per your wish ( i have chosen t2.micro) and number of instances to be launch in the cluster
 
 
 
