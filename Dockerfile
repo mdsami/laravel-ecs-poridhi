@@ -1,46 +1,60 @@
-FROM php:8.3-fpm-alpine as php
+FROM php:8.0.5-fpm-alpine
 
-RUN apk add --no-cache unzip libpq-dev gnutls-dev autoconf build-base \
-    curl-dev nginx supervisor shadow bash
-RUN docker-php-ext-install pdo pdo_mysql
-RUN pecl install pcov && docker-php-ext-enable pcov
-RUN docker-php-ext-install pcntl
+WORKDIR  /var/www
 
-WORKDIR /app
+RUN apk update && apk add \
+    build-base \
+    freetype-dev \
+    libpng-dev \
+    libjpeg-turbo-dev \
+    libzip-dev \
+    zip \
+    vim \
+    unzip \
+    git \
+    jpegoptim optipng pngquant gifsicle \
+    curl     
 
-# Setup PHP-FPM.
-COPY docker/php/php.ini $PHP_INI_DIR/
-COPY docker/php/php-fpm.conf /usr/local/etc/php-fpm.d/www.conf
-COPY docker/php/conf.d/opcache.ini $PHP_INI_DIR/conf.d/opcache.ini
 
-RUN addgroup --system --gid 1000 customgroup
-RUN adduser --system --ingroup customgroup --uid 1000 customuser
+RUN docker-php-ext-install pdo_mysql zip exif pcntl
+RUN docker-php-ext-configure gd  --with-freetype=/usr/include/ --with-jpeg=/usr/include/ 
+RUN docker-php-ext-install gd
 
-# Setup nginx.
-COPY docker/nginx/nginx.conf docker/nginx/fastcgi_params docker/nginx/fastcgi_fpm docker/nginx/gzip_params /etc/nginx/
-RUN mkdir -p /var/lib/nginx/tmp /var/log/nginx
-RUN /usr/sbin/nginx -t -c /etc/nginx/nginx.conf
 
-# setup nginx user permissions
-RUN chown -R customuser:customgroup /var/lib/nginx /var/log/nginx
-RUN chown -R customuser:customgroup /usr/local/etc/php-fpm.d
+RUN apk add autoconf && pecl install -o -f redis \
+&& rm -rf /tmp/pear \
+&& docker-php-ext-enable redis && apk del autoconf
 
-# Setup supervisor.
-COPY docker/supervisor/supervisord.conf /etc/supervisor/supervisord.conf
+COPY ./config/php/local.ini /usr/local/etc/php/conf.d/local.ini
 
-# Copy application sources into the container.
-COPY --chown=customuser:customgroup . .
-RUN chown -R customuser:customgroup /app
-RUN chmod +w /app/public
-RUN chown -R customuser:customgroup /var /run
+RUN addgroup -g 655 -S www && \
+    adduser -u 655 -S www -G www
 
-# disable root user
-RUN passwd -l root
-RUN usermod -s /usr/sbin/nologin root
+# Copy existing application directory contents
+COPY . /var/www
 
-USER customuser
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+# Copy existing application directory permissions
+COPY --chown=www:www . /var/www
 
-ENTRYPOINT ["docker/entrypoint.sh"]
+ RUN chown -R www:www /var/www/storage
+ RUN chmod -R 777 /var/www/storage
+ RUN chmod -R 777 storage bootstrap/cache
+ RUN chmod -R 777 ./
 
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/supervisord.conf"]
+# Change current user to www
+USER www
+
+# Expose port 9000 and start php-fpm server
+EXPOSE 9000
+CMD ["php-fpm"]
+
+
+# COPY --chown=www:www-data . /var/www
+
+# RUN chown -R www:www /var/www/storage
+# RUN chmod -R 777 /var/www/storage
+
+# USER www
+
+# EXPOSE 9000
+# CMD ["php-fpm"]
